@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>勉強タイマー（黄色）</title>
+  <style>
+    /* ---------------------------
+       カラーパレット（黄色・オレンジ寄せ）
+       --------------------------- */
+    :root{
+      --primary: #ff9f1c;        /* 濃いオレンジ */
+      --secondary: #ffd166;      /* 明るい黄色 */
+      --accent: #ffbf69;
+      --bg-start: #fff7e6;
+      --bg-end: #fff1cc;
+      --text-dark: #2a2a2a;
+      --muted: #6b6b6b;
+      --white: #ffffff;
+      --shadow-sm: 0 6px 18px rgba(0,0,0,0.08);
+      --shadow-md: 0 18px 40px rgba(0,0,0,0.12);
+    }
+
+    /* ベーシックリセット */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+      background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+      color:var(--text-dark);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+
+    /* コンテナ */
+    .app {
+      width:100%;
+      max-width:680px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,250,240,0.85));
+      border-radius:20px;
+      padding:32px;
+      box-shadow:var(--shadow-md);
+      position:relative;
+    }
+
+    /* ヘッダー */
+    .header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+    }
+    .logo {
+      font-weight:800;
+      font-size:20px;
+      background:linear-gradient(90deg,var(--primary),var(--secondary));
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+    .controls-inline {
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .small-btn {
+      border:none;
+      background:var(--primary);
+      color:white;
+      padding:8px 12px;
+      border-radius:10px;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow:var(--shadow-sm);
+    }
+    .small-btn.secondary {
+      background:var(--secondary);
+      color:var(--text-dark);
+    }
+
+    /* タイマー表示 */
+    .timer-area {
+      display:flex;
+      gap:24px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    .circle {
+      width:260px;
+      height:260px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: conic-gradient(var(--primary) 0deg, rgba(255,255,255,0.4) 0deg);
+      box-shadow: var(--shadow-md);
+      position:relative;
+    }
+    .inner {
+      width:82%;
+      height:82%;
+      border-radius:50%;
+      background:var(--white);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      box-shadow:var(--shadow-sm);
+      text-align:center;
+    }
+    .time {
+      font-size:48px;
+      font-weight:800;
+      letter-spacing:1px;
+    }
+    .mode-label {
+      margin-top:8px;
+      font-size:13px;
+      font-weight:700;
+      color:var(--muted);
+    }
+
+    /* プリセット */
+    .presets {
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+      margin-top:8px;
+    }
+    .preset {
+      background:var(--white);
+      border-radius:12px;
+      padding:12px;
+      text-align:center;
+      cursor:pointer;
+      box-shadow:var(--shadow-sm);
+      border:2px solid transparent;
+      user-select:none;
+    }
+    .preset.active {
+      border-color:var(--primary);
+      transform:translateY(-4px);
+    }
+    .preset .title { font-weight:800; font-size:15px }
+    .preset .sub { font-size:12px; color:var(--muted) }
+
+    /* カスタムパネル */
+    .custom {
+      margin-top:12px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    .input {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+    }
+    .input input {
+      width:100px;
+      padding:10px;
+      border-radius:10px;
+      border:2px solid #fff;
+      text-align:center;
+      font-weight:700;
+      font-size:18px;
+      box-shadow:var(--shadow-sm);
+    }
+
+    /* 大きめのコントロールボタン */
+    .main-controls {
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      margin-top:18px;
+      flex-wrap:wrap;
+    }
+    .big-btn {
+      padding:14px 28px;
+      border-radius:14px;
+      border:none;
+      font-weight:800;
+      cursor:pointer;
+      box-shadow:var(--shadow-sm);
+      background:linear-gradient(90deg,var(--primary),var(--secondary));
+      color:white;
+      font-size:16px;
+    }
+    .big-btn.ghost {
+      background:transparent;
+      border:2px solid rgba(0,0,0,0.06);
+      color:var(--text-dark);
+    }
+
+    /* 統計 */
+    .stats {
+      display:flex;
+      gap:12px;
+      margin-top:18px;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .stat {
+      background:var(--white);
+      padding:12px;
+      border-radius:10px;
+      box-shadow:var(--shadow-sm);
+      min-width:120px;
+      text-align:center;
+    }
+    .stat .num { font-size:20px; font-weight:800 }
+    .muted { color:var(--muted) }
+
+    /* 通知 */
+    .notify {
+      position:fixed;
+      right:18px;
+      top:18px;
+      background:var(--white);
+      border-radius:10px;
+      padding:10px 14px;
+      box-shadow:var(--shadow-md);
+      display:none;
+      font-weight:700;
+    }
+    .notify.show { display:block }
+
+    /* レスポンシブ */
+    @media (max-width:640px){
+      .circle { width:200px; height:200px }
+      .time { font-size:40px }
+      .presets { grid-template-columns:repeat(2,1fr) }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="勉強タイマー">
+    <div class="header">
+      <div class="logo">Study Timer - Yellow</div>
+      <div class="controls-inline">
+        <button class="small-btn secondary" id="muteBtn" aria-pressed="false">サウンド</button>
+        <button class="small-btn" id="clearStatsBtn">統計クリア</button>
+      </div>
+    </div>
+
+    <div class="timer-area">
+      <div class="circle" id="progressCircle" aria-hidden="true">
+        <div class="inner" role="timer" aria-live="polite">
+          <div class="time" id="timeDisplay">25:00</div>
+          <div class="mode-label" id="modeLabel">集中タイム</div>
+        </div>
+      </div>
+
+      <div style="min-width:220px;max-width:260px;">
+        <div class="presets" id="presets">
+          <div class="preset active" data-preset="pomodoro" tabindex="0"><div class="title">Pomodoro</div><div class="sub">25分 / 休憩 5分</div></div>
+          <div class="preset" data-preset="short" tabindex="0"><div class="title">短め</div><div class="sub">15分 / 5分</div></div>
+          <div class="preset" data-preset="custom" tabindex="0"><div class="title">カスタム</div><div class="sub">自由設定</div></div>
+        </div>
+
+        <div class="custom" id="customPanel" style="display:none;">
+          <div class="input">
+            <label class="muted">分</label>
+            <input type="number" id="minutes" min="0" max="999" value="25" aria-label="分を設定">
+          </div>
+          <div class="input">
+            <label class="muted">秒</label>
+            <input type="number" id="seconds" min="0" max="59" value="0" aria-label="秒を設定">
+          </div>
+          <div style="display:flex;align-items:center;">
+            <button class="small-btn" id="applyBtn">適用</button>
+          </div>
+        </div>
+
+        <div class="main-controls" style="margin-top:14px;">
+          <button class="big-btn" id="startBtn">スタート</button>
+          <button class="big-btn ghost" id="resetBtn">リセット</button>
+        </div>
+
+        <div class="stats" style="margin-top:12px;">
+          <div class="stat">
+            <div class="muted">今日の達成</div>
+            <div class="num" id="todayCount">0</div>
+          </div>
+          <div class="stat">
+            <div class="muted">合計時間</div>
+            <div class="num" id="totalTime">0分</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notify" id="notification" role="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    /**
+     * 改良ポイント（要約）
+     * - 黄色/オレンジ基調にデザイン調整
+     * - タイマー終了時のアラーム（Web Audio API）を追加（ミュート可）
+     * - 背景の水玉等の装飾は除去（軽量化）
+     * - 時間設定不具合を修正（preset.duration / preset.break を正しく参照）
+     * - 機能優先でコードを整理（可読性・保守性向上）
+     */
+
+    (function(){
+      'use strict';
+
+      /* -----------------------------
+         定数・設定（編集しやすい）
+         ----------------------------- */
+      const PRESETS = {
+        pomodoro: { duration: 25 * 60, break: 5 * 60, label: 'Pomodoro' },
+        short:   { duration: 15 * 60, break: 5 * 60, label: '短め' },
+        custom:  { duration: 25 * 60, break: 5 * 60, label: 'カスタム' }
+      };
+
+      const MOTIVATIONS = [
+        '素晴らしいスタートです',
+        '集中力が高まっています',
+        '順調に進んでいますね',
+        'その調子で頑張りましょう',
+        'あと少しで達成です'
+      ];
+
+      const COMPLETION_MSGS = [
+        'お疲れ様でした！',
+        '休憩を取りましょう',
+        'よくやりました！'
+      ];
+
+      /* -----------------------------
+         状態（state）
+         - timeLeft は常に秒で保持
+         - totalTime は現在モードでの合計秒
+         ----------------------------- */
+      let state = {
+        presetKey: 'pomodoro', // 現在選択プリセットのキー
+        mode: 'work',          // 'work' or 'break'
+        timeLeft: PRESETS.pomodoro.duration,
+        totalTime: PRESETS.pomodoro.duration,
+        running: false,
+        intervalId: null,
+        custom: { duration: PRESETS.custom.duration, break: PRESETS.custom.break },
+        soundEnabled: true
+      };
+
+      /* -----------------------------
+         DOM参照（まとめて管理）
+         ----------------------------- */
+      const D = {
+        presets: document.getElementById('presets'),
+        presetCards: document.querySelectorAll('.preset'),
+        customPanel: document.getElementById('customPanel'),
+        minutes: document.getElementById('minutes'),
+        seconds: document.getElementById('seconds'),
+        applyBtn: document.getElementById('applyBtn'),
+        startBtn: document.getElementById('startBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        timeDisplay: document.getElementById('timeDisplay'),
+        modeLabel: document.getElementById('modeLabel'),
+        progressCircle: document.getElementById('progressCircle'),
+        todayCount: document.getElementById('todayCount'),
+        totalTimeEl: document.getElementById('totalTime'),
+        notification: document.getElementById('notification'),
+        muteBtn: document.getElementById('muteBtn'),
+        clearStatsBtn: document.getElementById('clearStatsBtn')
+      };
+
+      /* -----------------------------
+         ストレージキー
+         ----------------------------- */
+      const STORAGE_KEYS = {
+        STATE: 'ft_state_v1',
+        STATS: 'ft_stats_v1'
+      };
+
+      /* -----------------------------
+         サウンド（Web Audio API）モジュール
+         - アラームを5秒またはユーザー停止まで鳴らす
+         - ミュート機能に対応
+         ----------------------------- */
+      const Sound = (function(){
+        let ctx = null;
+        let masterGain = null;
+        let alarmOscs = [];
+        let alarmTimeout = null;
+
+        function ensureCtx(){
+          if (!ctx) {
+            try {
+              ctx = new (window.AudioContext || window.webkitAudioContext)();
+              masterGain = ctx.createGain();
+              masterGain.gain.value = 0.8;
+              masterGain.connect(ctx.destination);
+            } catch (e) {
+              console.warn('AudioContext unavailable', e);
+              ctx = null;
+            }
+          }
+        }
+
+        function startAlarm(durationSec = 5){
+          if (!state.soundEnabled) return;
+          ensureCtx();
+          if (!ctx) return;
+          stopAlarm(); // 既存停止
+
+          // シンプルな短いビープの組み合わせをループ
+          const freqs = [880, 660, 990];
+          freqs.forEach((f, i) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = f;
+            g.gain.value = 0;
+            osc.connect(g);
+            g.connect(masterGain);
+            const now = ctx.currentTime + i * 0.08;
+            g.gain.linearRampToValueAtTime(0.5, now + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+            osc.start(now);
+            osc.stop(now + 0.4);
+            alarmOscs.push(osc);
+          });
+
+          // 小休止を置いて繰り返す（durationSecまで）
+          const repeatInterval = 600; // ms
+          let elapsed = 0;
+          function loop(){
+            if (!ctx) return;
+            if (elapsed >= durationSec * 1000) {
+              stopAlarm();
+              return;
+            }
+            elapsed += repeatInterval;
+            // 次の鳴動をセット（簡潔に）
+            alarmTimeout = setTimeout(loop, repeatInterval);
+            // 別音色をほんの少し鳴らす
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.value = 520;
+            g.gain.value = 0;
+            osc.connect(g); g.connect(masterGain);
+            const now = ctx.currentTime;
+            g.gain.linearRampToValueAtTime(0.4, now + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.25);
+            alarmOscs.push(osc);
+          }
+          alarmTimeout = setTimeout(loop, 450);
+        }
+
+        function stopAlarm(){
+          if (alarmTimeout) { clearTimeout(alarmTimeout); alarmTimeout = null; }
+          if (alarmOscs.length && ctx) {
+            try {
+              alarmOscs.forEach(o => {
+                try { o.disconnect(); } catch(_) {}
+              });
+            } catch(e){}
+            alarmOscs = [];
+          }
+        }
+
+        return { startAlarm, stopAlarm };
+      })();
+
+      /* -----------------------------
+         ユーティリティ関数
+         ----------------------------- */
+      function secondsToText(s){
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+      }
+
+      function showNotification(message, timeout = 3000){
+        D.notification.textContent = message;
+        D.notification.classList.add('show');
+        setTimeout(()=> D.notification.classList.remove('show'), timeout);
+      }
+
+      /* -----------------------------
+         ストレージ操作（状態・統計）
+         ----------------------------- */
+      function saveState(){
+        try {
+          const toSave = {
+            presetKey: state.presetKey,
+            custom: state.custom,
+            soundEnabled: state.soundEnabled
+          };
+          localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(toSave));
+        } catch(e){ console.warn('saveState err', e) }
+      }
+
+      function loadState(){
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.STATE);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (parsed.presetKey) state.presetKey = parsed.presetKey;
+          if (parsed.custom) {
+            state.custom = parsed.custom;
+            PRESETS.custom.duration = parsed.custom.duration;
+            PRESETS.custom.break = parsed.custom.break;
+          }
+          if (typeof parsed.soundEnabled === 'boolean') state.soundEnabled = parsed.soundEnabled;
+        } catch(e){ console.warn('loadState err', e) }
+      }
+
+      function loadStats(){
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.STATS);
+          if (!raw) return { };
+          return JSON.parse(raw);
+        } catch(e){ return {}; }
+      }
+
+      function saveStats(stats){
+        try {
+          localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
+        } catch(e){ console.warn('saveStats err', e) }
+      }
+
+      function updateStatsOnComplete(){
+        try {
+          const stats = loadStats();
+          const key = new Date().toDateString();
+          if (!stats[key]) stats[key] = { count:0, time:0 };
+          stats[key].count += 1;
+          stats[key].time += state.totalTime;
+          saveStats(stats);
+          refreshStatsDisplay();
+        } catch(e){ console.warn('updateStatsOnComplete err', e) }
+      }
+
+      function refreshStatsDisplay(){
+        try {
+          const stats = loadStats();
+          const key = new Date().toDateString();
+          const today = stats[key] || { count:0, time:0 };
+          D.todayCount.textContent = today.count;
+          D.totalTimeEl.textContent = Math.floor((today.time || 0) / 60) + '分';
+        } catch(e){ console.warn(e) }
+      }
+
+      /* -----------------------------
+         プリセット / カスタム 選択
+         ----------------------------- */
+      function setActivePreset(key){
+        state.presetKey = key;
+        // UI切替
+        D.presetCards.forEach(c => c.classList.toggle('active', c.dataset.preset === key));
+        if (key === 'custom') {
+          D.customPanel.style.display = 'flex';
+          // カスタム入力に現在値を反映しておく
+          const mins = Math.floor(state.custom.duration / 60);
+          const secs = state.custom.duration % 60;
+          D.minutes.value = mins;
+          D.seconds.value = secs;
+        } else {
+          D.customPanel.style.display = 'none';
+        }
+        // 現在モードの時間をリセット
+        applyPresetTimesToState();
+        saveState();
+        renderDisplay();
+      }
+
+      function applyPresetTimesToState(){
+        const preset = PRESETS[state.presetKey];
+        if (!preset) return;
+        state.totalTime = (state.mode === 'work') ? preset.duration : preset.break;
+        state.timeLeft = state.totalTime;
+      }
+
+      /* -----------------------------
+         カスタム適用（入力検証含む）
+         ----------------------------- */
+      function applyCustom(){
+        const mins = Math.max(0, parseInt(D.minutes.value || '0', 10));
+        let secs = Math.max(0, parseInt(D.seconds.value || '0', 10));
+        if (isNaN(mins) || isNaN(secs)) {
+          showNotification('無効な値です', 2500);
+          return;
+        }
+        if (secs > 59) secs = 59; // 上限補正
+        const total = mins * 60 + secs;
+        if (total <= 0) {
+          showNotification('0より大きい時間を設定してください', 2500);
+          return;
+        }
+
+        state.custom.duration = total;
+        // breakは固定5分（必要ならUIに入れる）
+        state.custom.break = 5 * 60;
+        PRESETS.custom.duration = total;
+        PRESETS.custom.break = state.custom.break;
+
+        // カスタムが選択中なら即適用
+        if (state.presetKey === 'custom') {
+          applyPresetTimesToState();
+        }
+        saveState();
+        showNotification('カスタムを適用しました');
+        renderDisplay();
+      }
+
+      /* -----------------------------
+         タイマー制御（start/pause/reset/complete）
+         ----------------------------- */
+      function startPause(){
+        if (state.running) {
+          pauseTimer();
+        } else {
+          startTimer();
+        }
+      }
+
+      function startTimer(){
+        if (state.running) return;
+        state.running = true;
+        D.startBtn.textContent = '一時停止';
+        // tick every second
+        state.intervalId = setInterval(() => {
+          state.timeLeft = Math.max(0, state.timeLeft - 1);
+          renderDisplay();
+          if (state.timeLeft <= 0) {
+            handleCompletion();
+          }
+        }, 1000);
+      }
+
+      function pauseTimer(){
+        state.running = false;
+        D.startBtn.textContent = 'スタート';
+        if (state.intervalId) {
+          clearInterval(state.intervalId);
+          state.intervalId = null;
+        }
+      }
+
+      function resetTimer(){
+        pauseTimer();
+        applyPresetTimesToState();
+        renderDisplay();
+      }
+
+      function handleCompletion(){
+        pauseTimer();
+
+        // 効果音・アラーム
+        if (state.soundEnabled) {
+          Sound.startAlarm(6); // 最大6秒鳴る（自動停止）
+        }
+
+        // 統計はwork完了時に更新
+        if (state.mode === 'work') {
+          updateStatsOnComplete();
+        }
+
+        // 通知
+        const msg = (state.mode === 'work') ? COMPLETION_MSGS[Math.floor(Math.random()*COMPLETION_MSGS.length)] : '休憩が終わりました';
+        showNotification(msg, 4000);
+
+        // モード切替（work -> break, break -> work）
+        state.mode = (state.mode === 'work') ? 'break' : 'work';
+        // 次モードの時間をセット
+        applyPresetTimesToState();
+        renderDisplay();
+      }
+
+      /* -----------------------------
+         描画 / UI更新
+         - プログレス（円）をわかりやすく描画
+         - モチベーションは経過率で切替
+         ----------------------------- */
+      function renderDisplay(){
+        // 時刻表示
+        D.timeDisplay.textContent = secondsToText(state.timeLeft);
+        D.modeLabel.textContent = (state.mode === 'work') ? '集中タイム' : '休憩タイム';
+
+        // プログレス: 経過率（0..1）
+        const elapsed = (state.totalTime - state.timeLeft) / Math.max(1, state.totalTime);
+        const angle = Math.round(elapsed * 360);
+        D.progressCircle.style.background = `conic-gradient(var(--primary) ${angle}deg, rgba(255,255,255,0.5) ${angle}deg)`;
+
+        // Start/Stop ボタン表示
+        D.startBtn.textContent = state.running ? '一時停止' : 'スタート';
+
+        // モチベメッセージ（簡易）
+        // （表示は通知にしているため不要ならコメントアウト可）
+        // updateMotivation(elapsed);
+      }
+
+      /* -----------------------------
+         キーボードハンドラ
+         ----------------------------- */
+      function handleKey(e){
+        // 入力フォーカス時は無視
+        if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
+        if (e.key === ' '){
+          e.preventDefault();
+          startPause();
+        } else if (e.key.toLowerCase() === 'r'){
+          resetTimer();
+        } else if (e.key === '1') {
+          setActivePreset('pomodoro');
+        } else if (e.key === '2') {
+          setActivePreset('short');
+        } else if (e.key === '3') {
+          setActivePreset('custom');
+        }
+      }
+
+      /* -----------------------------
+         初期化処理（イベント登録など）
+         ----------------------------- */
+      function bindEvents(){
+        // プリセットクリック（イベントデリゲーション）
+        D.presetCards.forEach(card => {
+          card.addEventListener('click', ()=> setActivePreset(card.dataset.preset));
+          card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setActivePreset(card.dataset.preset);
+            }
+          });
+        });
+
+        D.applyBtn.addEventListener('click', applyCustom);
+        D.startBtn.addEventListener('click', startPause);
+        D.resetBtn.addEventListener('click', resetTimer);
+
+        D.muteBtn.addEventListener('click', () => {
+          state.soundEnabled = !state.soundEnabled;
+          D.muteBtn.textContent = state.soundEnabled ? '🔔 サウンド' : '🔕 無音';
+          D.muteBtn.setAttribute('aria-pressed', String(!state.soundEnabled));
+          saveState();
+          if (!state.soundEnabled) Sound.stopAlarm();
+        });
+
+        D.clearStatsBtn.addEventListener('click', () => {
+          if (!confirm('統計をクリアしますか？')) return;
+          localStorage.removeItem(STORAGE_KEYS.STATS);
+          refreshStatsDisplay();
+          showNotification('統計をクリアしました');
+        });
+
+        document.addEventListener('keydown', handleKey);
+
+        // エンターでカスタム適用
+        D.minutes.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyCustom(); });
+        D.seconds.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyCustom(); });
+      }
+
+      /* -----------------------------
+         起動時処理
+         ----------------------------- */
+      function init(){
+        loadState();
+        refreshStatsDisplay();
+        // 選択プリセットを復元し、stateに時間をセット
+        setActivePreset(state.presetKey);
+        bindEvents();
+        renderDisplay();
+      }
+
+      // 初期化
+      init();
+
+      // 画面を離れる時はタイマーを止める & サウンド停止
+      window.addEventListener('beforeunload', () => {
+        pauseTimer();
+        Sound.stopAlarm();
+      });
+
+    })();
+  </script>
+</body>
+</html>
