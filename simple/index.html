@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>勉強タイマー(cute ver)</title>
+  <title>勉強タイマー</title>
   <style>
     /* ========================================
        カラーパレット & リセット
@@ -530,7 +530,7 @@
     <!-- プリセット選択 -->
     <div class="presets">
       <button class="preset-btn active" data-preset="pomodoro" aria-label="Pomodoroタイマー 25分">
-        <div>🍅 Pomodoro</div>
+        <div>Pomodoro</div>
         <span class="preset-time">25分 / 5分</span>
       </button>
       <button class="preset-btn" data-preset="short" aria-label="短め集中タイマー 15分">
@@ -538,7 +538,7 @@
         <span class="preset-time">15分 / 5分</span>
       </button>
       <button class="preset-btn" data-preset="custom" aria-label="カスタムタイマー">
-        <div>⚙️ カスタム</div>
+        <div>カスタム</div>
         <span class="preset-time">自由設定</span>
       </button>
     </div>
@@ -895,4 +895,143 @@
         } else {
           // 休憩完了 → 作業へ
           showNotification('休憩終了！頑張りましょう 💪');
-          state.currentMode = 'work
+          state.currentMode = 'work';
+        }
+
+        const preset = PRESETS[state.currentPreset];
+        state.timeRemaining = preset[state.currentMode];
+        state.totalTime = preset[state.currentMode];
+        updateDisplay();
+      }
+
+      // ========================================
+      // 完了サウンド再生
+      // ========================================
+      function playCompletionSound() {
+        try {
+          // Web Audio APIでシンプルなベル音を生成
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (e) {
+          console.error('Audio playback error:', e);
+        }
+      }
+
+      // ========================================
+      // 通知表示
+      // ========================================
+      function showNotification(message, type = 'success') {
+        elements.notification.textContent = message;
+        elements.notification.classList.remove('error');
+        if (type === 'error') {
+          elements.notification.classList.add('error');
+        }
+        elements.notification.classList.add('show');
+
+        setTimeout(() => {
+          elements.notification.classList.remove('show');
+        }, 3000);
+      }
+
+      // ========================================
+      // ダークモード切替
+      // ========================================
+      function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        try {
+          localStorage.setItem('darkMode', isDark);
+        } catch (e) {
+          console.error('Dark mode save error:', e);
+        }
+      }
+
+      // ========================================
+      // キーボード操作
+      // ========================================
+      function handleKeyboard(e) {
+        // 入力フォーカス時は無効化
+        if (e.target.tagName === 'INPUT') return;
+
+        switch(e.key.toLowerCase()) {
+          case ' ':
+            e.preventDefault();
+            startTimer();
+            break;
+          case 'r':
+            resetTimer();
+            break;
+          case '1':
+            selectPreset('pomodoro');
+            break;
+          case '2':
+            selectPreset('short');
+            break;
+          case '3':
+            selectPreset('custom');
+            break;
+        }
+      }
+
+      // ========================================
+      // イベントリスナー設定
+      // ========================================
+      function setupEventListeners() {
+        // プリセットボタン
+        elements.presetBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectPreset(btn.dataset.preset);
+          });
+        });
+
+        // カスタム設定適用
+        elements.applyCustom.addEventListener('click', applyCustomSettings);
+
+        // タイマー制御ボタン
+        elements.startBtn.addEventListener('click', startTimer);
+        elements.resetBtn.addEventListener('click', resetTimer);
+
+        // ダークモード切替
+        elements.darkModeToggle.addEventListener('click', toggleDarkMode);
+
+        // キーボード操作
+        document.addEventListener('keydown', handleKeyboard);
+
+        // カスタム入力のEnterキー
+        elements.customMinutes.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') applyCustomSettings();
+        });
+        elements.customSeconds.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') applyCustomSettings();
+        });
+      }
+
+      // ========================================
+      // 初期化
+      // ========================================
+      function init() {
+        loadFromStorage();
+        selectPreset(state.currentPreset);
+        setupEventListeners();
+        updateDisplay();
+      }
+
+      // アプリ起動
+      init();
+    })();
+  </script>
+</body>
+</html>
