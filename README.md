@@ -6,6 +6,10 @@
 
 [fwafwa ver is here](https://zenn24ct.github.io/study-timer/fwa-orange/)
 
+[plant ver is here](https://zenn24ct.github.io/study-timer/plant/)
+
+[plant02 ver is here](https://zenn24ct.github.io/study-timer/plant02/)
+
 ## 機能
 - Pomodoro（25分）、短め集中（15分）、カスタム設定の3つのプリセット
 - スタート/一時停止/リセット機能
