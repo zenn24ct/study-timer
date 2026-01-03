@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>モダンタイマー(要修正)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-lg: 0 20px 60px rgba(102, 126, 234, 0.3);
+            --shadow-xl: 0 25px 80px rgba(102, 126, 234, 0.4);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 背景アニメーション */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -250px;
+            left: -250px;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -200px;
+            right: -200px;
+            animation: float 15s infinite ease-in-out reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(50px, 50px) scale(1.1); }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 40px;
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ヘッダー */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 900;
+            background: var(--bg-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            transition: all 0.3s;
+        }
+
+        .mode-badge.break {
+            background: linear-gradient(135deg, #10b98115 0%, #06b6d415 100%);
+            color: var(--success);
+        }
+
+        /* タイマー表示 */
+        .timer-section {
+            position: relative;
+            margin: 40px 0;
+        }
+
+        .timer-circle {
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+            filter: drop-shadow(0 5px 15px rgba(102, 126, 234, 0.3));
+        }
+
+        .progress-bg {
+            fill: none;
+            stroke: #f3f4f6;
+            stroke-width: 12;
+        }
+
+        .progress-bar {
+            fill: none;
+            stroke: url(#gradient);
+            stroke-width: 12;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s linear;
+        }
+
+        .timer-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .plant-display {
+            font-size: 80px;
+            margin-bottom: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .timer-display {
+            font-size: 56px;
+            font-weight: 900;
+            background: var(--bg-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -2px;
+        }
+
+        .timer-label {
+            font-size: 13px;
+            color: #9ca3af;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+
+        /* コントロールボタン */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 18px;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: var(--bg-gradient);
+            color: white;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 70px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* 設定パネル */
+        .settings-panel {
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            border-radius: 25px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .settings-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .setting-item {
+            background: white;
+            padding: 20px;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s;
+        }
+
+        .setting-item:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .setting-label {
+            font-size: 12px;
+            color: #9ca3af;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .setting-value {
+            font-size: 28px;
+            font-weight: 900;
+            background: var(--bg-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 10px;
+            background: #e5e7eb;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--bg-gradient);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--bg-gradient);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        /* コレクション */
+        .collection {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f3f4f6;
+        }
+
+        .collection-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .collection-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #374151;
+        }
+
+        .collection-count {
+            background: var(--bg-gradient);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .collection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 12px;
+            min-height: 80px;
+        }
+
+        .collection-item {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .collection-item:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0) rotate(-180deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 25px;
+            }
+
+            .timer-circle {
+                width: 240px;
+                height: 240px;
+            }
+
+            .plant-display {
+                font-size: 60px;
+            }
+
+            .timer-display {
+                font-size: 44px;
+            }
+
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .collection-grid {
+                grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">✨ Focus Flow</div>
+            <div class="mode-badge" id="modeBadge">
+                <span id="modeIcon">🎯</span>
+                <span id="modeText">集中タイム</span>
+            </div>
+        </div>
+
+        <div class="timer-section">
+            <div class="timer-circle">
+                <svg class="progress-ring" width="280" height="280">
+                    <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle class="progress-bg" cx="140" cy="140" r="130" />
+                    <circle class="progress-bar" cx="140" cy="140" r="130" 
+                            stroke-dasharray="817" stroke-dashoffset="0" id="progressCircle" />
+                </svg>
+                <div class="timer-content">
+                    <div class="plant-display" id="plantDisplay">🌱</div>
+                    <div class="timer-display" id="timerDisplay">25:00</div>
+                    <div class="timer-label">残り時間</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn">スタート</button>
+            <button class="btn btn-secondary" id="resetBtn">リセット</button>
+        </div>
+
+        <div class="settings-panel">
+            <div class="settings-title">⚙️ タイマー設定</div>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <div class="setting-label">集中時間</div>
+                    <div class="setting-value"><span id="workValue">25</span>分</div>
+                    <input type="range" class="slider" id="workSlider" 
+                           min="1" max="60" value="25">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">休憩時間</div>
+                    <div class="setting-value"><span id="breakValue">5</span>分</div>
+                    <input type="range" class="slider" id="breakSlider" 
+                           min="1" max="30" value="5">
+                </div>
+            </div>
+        </div>
+
+        <div class="collection">
+            <div class="collection-header">
+                <div class="collection-title">🏆 マイコレクション</div>
+                <div class="collection-count" id="collectionCount">0</div>
+            </div>
+            <div class="collection-grid" id="collectionGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        const PLANTS = ['🌻', '🌷', '🌼', '🌵', '🌴', '🌲', '🌳', '🍁', '🌸', '🍀', '🌿', '🎋', '🍃', '🍄', '🍓', '🍎', '🍇', '🎃', '🍊', '🍉', '🥕', '🌽', '🥑', '🥦', '🌶️'];
+        const GROWTH_STAGES = ['🌱', '🌿', '🌾', '🎍'];
+
+        let state = {
+            workMinutes: 25,
+            breakMinutes: 5,
+            timeLeft: 25 * 60,
+            totalTime: 25 * 60,
+            isRunning: false,
+            mode: 'work',
+            collection: []
+        };
+
+        let intervalId = null;
+
+        // DOM要素
+        const elements = {
+            timer: document.getElementById('timerDisplay'),
+            plant: document.getElementById('plantDisplay'),
+            startBtn: document.getElementById('startBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+            modeBadge: document.getElementById('modeBadge'),
+            modeIcon: document.getElementById('modeIcon'),
+            modeText: document.getElementById('modeText'),
+            workSlider: document.getElementById('workSlider'),
+            breakSlider: document.getElementById('breakSlider'),
+            workValue: document.getElementById('workValue'),
+            breakValue: document.getElementById('breakValue'),
+            collectionGrid: document.getElementById('collectionGrid'),
+            collectionCount: document.getElementById('collectionCount'),
+            progressCircle: document.getElementById('progressCircle')
+        };
+
+        // 設定更新
+        function updateSettings() {
+            state.workMinutes = parseInt(elements.workSlider.value);
+            state.breakMinutes = parseInt(elements.breakSlider.value);
+            elements.workValue.textContent = state.workMinutes;
+            elements.breakValue.textContent = state.breakMinutes;
+
+            if (!state.isRunning) {
+                state.timeLeft = (state.mode === 'work' ? state.workMinutes : state.breakMinutes) * 60;
+                state.totalTime = state.timeLeft;
+                updateDisplay();
+            }
+        }
+
+        // 表示更新
+        function updateDisplay() {
+            const minutes = Math.floor(state.timeLeft / 60);
+            const seconds = state.timeLeft % 60;
+            elements.timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            // プログレスバー更新
+            const progress = 1 - (state.timeLeft / state.totalTime);
+            const circumference = 2 * Math.PI * 130;
+            const offset = circumference * (1 - progress);
+            elements.progressCircle.style.strokeDashoffset = offset;
+
+            // 植物の成長
+            if (state.mode === 'work') {
+                const stageIndex = Math.min(
+                    Math.floor(progress * GROWTH_STAGES.length),
+                    GROWTH_STAGES.length - 1
+                );
+                elements.plant.textContent = GROWTH_STAGES[stageIndex];
+            } else {
+                elements.plant.textContent = '☕';
+            }
+        }
+
+        // タイマー処理
+        function tick() {
+            if (state.timeLeft > 0) {
+                state.timeLeft--;
+                updateDisplay();
+            } else {
+                completeSession();
+            }
+        }
+
+        // セッション完了
+        function completeSession() {
+            clearInterval(intervalId);
+            state.isRunning = false;
+            elements.startBtn.textContent = 'スタート';
+
+            if (state.mode === 'work') {
+                // コレクション追加
+                const newPlant = PLANTS[Math.floor(Math.random() * PLANTS.length)];
+                addToCollection(newPlant);
+
+                // 休憩モードへ
+                state.mode = 'break';
+                state.timeLeft = state.breakMinutes * 60;
+                state.totalTime = state.timeLeft;
+                elements.modeIcon.textContent = '☕';
+                elements.modeText.textContent = '休憩タイム';
+                elements.modeBadge.classList.add('break');
+            } else {
+                // 集中モードへ
+                state.mode = 'work';
+                state.timeLeft = state.workMinutes * 60;
+                state.totalTime = state.timeLeft;
+                elements.modeIcon.textContent = '🎯';
+                elements.modeText.textContent = '集中タイム';
+                elements.modeBadge.classList.remove('break');
+            }
+
+            updateDisplay();
+        }
+
+        // コレクション追加
+        function addToCollection(emoji) {
+            state.collection.unshift(emoji);
+            const item = document.createElement('div');
+            item.className = 'collection-item';
+            item.textContent = emoji;
+            elements.collectionGrid.insertBefore(item, elements.collectionGrid.firstChild);
+            elements.collectionCount.textContent = state.collection.length;
+        }
+
+        // イベントリスナー
+        elements.startBtn.addEventListener('click', () => {
+            if (state.isRunning) {
+                clearInterval(intervalId);
+                elements.startBtn.textContent = '再開';
+                state.isRunning = false;
+            } else {
+                intervalId = setInterval(tick, 1000);
+                elements.startBtn.textContent = '一時停止';
+                state.isRunning = true;
+            }
+        });
+
+        elements.resetBtn.addEventListener('click', () => {
+            clearInterval(intervalId);
+            state.isRunning = false;
+            state.mode = 'work';
+            elements.startBtn.textContent = 'スタート';
+            elements.modeIcon.textContent = '🎯';
+            elements.modeText.textContent = '集中タイム';
+            elements.modeBadge.classList.remove('break');
+            updateSettings();
+        });
+
+        elements.workSlider.addEventListener('input', updateSettings);
+        elements.breakSlider.addEventListener('input', updateSettings);
+
+        // 初期化
+        updateSettings();
+    </script>
+</body>
+</html>
