@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>plant timer</title>
+    <style>
+        :root {
+            --bg-work: #e8f5e9;
+            --accent-work: #4caf50;
+            --bg-break: #e3f2fd;
+            --accent-break: #2196f3;
+            --text-main: #2d3436;
+            --glass: rgba(255, 255, 255, 0.8);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            transition: background-color 1.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: var(--text-main);
+            background-color: var(--bg-work);
+        }
+
+        body.mode-break {
+            background-color: var(--bg-break);
+        }
+
+        .container {
+            text-align: center;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 450px;
+        }
+
+        /* 植物のビジュアル化 */
+        .plant-stage {
+            font-size: 80px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .timer-display {
+            font-size: 72px;
+            font-weight: 800;
+            margin: 10px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            background: var(--accent-work);
+            color: white;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            border: none;
+            padding: 15px 35px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn-main {
+            background: var(--text-main);
+            color: white;
+            flex-grow: 1;
+        }
+
+        .btn-main:hover { transform: translateY(-2px); opacity: 0.9; }
+
+        .btn-sub {
+            background: transparent;
+            border: 2px solid #ddd;
+            color: var(--text-main);
+        }
+
+        .stats-footer {
+            margin-top: 40px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            padding-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .stat-item span {
+            display: block;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .stat-item b { font-size: 20px; }
+
+        /* アニメーション */
+        .pulse { animation: pulse-anim 2s infinite; }
+        @keyframes pulse-anim {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body id="body">
+
+    <div class="container">
+        <div id="status" class="status-badge">Focus Time</div>
+        
+        <div class="plant-stage" id="plant">🌱</div>
+        
+        <div class="timer-display" id="display">25:00</div>
+        
+        <p id="message" style="color: #666; font-style: italic;">静かに成長を見守りましょう...</p>
+
+        <div class="controls">
+            <button class="btn btn-main" id="startBtn">START</button>
+            <button class="btn btn-sub" id="resetBtn">RESET</button>
+        </div>
+
+        <div class="stats-footer">
+            <div class="stat-item">
+                <span>育てた植物</span>
+                <b id="count">0</b>
+            </div>
+            <div class="stat-item">
+                <span>合計集中時間</span>
+                <b id="total">0</b>分
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            work: 25 * 60,
+            break: 5 * 60,
+            stages: ['🌱', '🌿', '🎍', '🌳', '✨']
+        };
+
+        let state = {
+            timeLeft: CONFIG.work,
+            isRunning: false,
+            mode: 'work',
+            totalSec: 0,
+            count: 0
+        };
+
+        const display = document.getElementById('display');
+        const plant = document.getElementById('plant');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const body = document.getElementById('body');
+        const status = document.getElementById('status');
+        const countEl = document.getElementById('count');
+        const totalEl = document.getElementById('total');
+
+        let timerId = null;
+
+        function updateDisplay() {
+            const m = Math.floor(state.timeLeft / 60);
+            const s = state.timeLeft % 60;
+            display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+            // 植物の成長度計算
+            if (state.mode === 'work') {
+                const progress = (CONFIG.work - state.timeLeft) / CONFIG.work;
+                const stageIdx = Math.min(Math.floor(progress * CONFIG.stages.length), CONFIG.stages.length - 1);
+                plant.textContent = CONFIG.stages[stageIdx];
+                if (state.isRunning) plant.classList.add('pulse');
+            } else {
+                plant.textContent = '☕';
+                plant.classList.remove('pulse');
+            }
+        }
+
+        function toggleTimer() {
+            if (state.isRunning) {
+                clearInterval(timerId);
+                startBtn.textContent = 'RESUME';
+            } else {
+                timerId = setInterval(tick, 1000);
+                startBtn.textContent = 'PAUSE';
+            }
+            state.isRunning = !state.isRunning;
+        }
+
+        function tick() {
+            if (state.timeLeft > 0) {
+                state.timeLeft--;
+                if (state.mode === 'work') state.totalSec++;
+                updateDisplay();
+            } else {
+                complete();
+            }
+        }
+
+        function complete() {
+            clearInterval(timerId);
+            state.isRunning = false;
+            
+            if (state.mode === 'work') {
+                state.count++;
+                state.mode = 'break';
+                state.timeLeft = CONFIG.break;
+                status.textContent = 'Break Time';
+                status.style.background = 'var(--accent-break)';
+                body.classList.add('mode-break');
+                alert('集中完了！植物が立派に育ちました。休憩しましょう。');
+            } else {
+                state.mode = 'work';
+                state.timeLeft = CONFIG.work;
+                status.textContent = 'Focus Time';
+                status.style.background = 'var(--accent-work)';
+                body.classList.remove('mode-break');
+                alert('リフレッシュ完了。新しい種を植えましょう。');
+            }
+
+            updateStats();
+            updateDisplay();
+            startBtn.textContent = 'START NEXT';
+        }
+
+        function reset() {
+            clearInterval(timerId);
+            state.isRunning = false;
+            state.mode = 'work';
+            state.timeLeft = CONFIG.work;
+            updateDisplay();
+            startBtn.textContent = 'START';
+            body.classList.remove('mode-break');
+            status.textContent = 'Focus Time';
+            status.style.background = 'var(--accent-work)';
+        }
+
+        function updateStats() {
+            countEl.textContent = state.count;
+            totalEl.textContent = Math.floor(state.totalSec / 60);
+        }
+
+        startBtn.addEventListener('click', toggleTimer);
+        resetBtn.addEventListener('click', reset);
+
+        // 初期化
+        updateDisplay();
+    </script>
+</body>
+</html>
