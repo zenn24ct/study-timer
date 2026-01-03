@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grow Focus Collection</title>
+    <style>
+        :root {
+            --bg-work: #f0f4f1;
+            --accent-work: #2d6a4f;
+            --accent-break: #4895ef;
+            --white: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Helvetica Neue', Arial, "Hiragino Kaku Gothic ProN", sans-serif;
+            background-color: var(--bg-work);
+            color: #1b4332;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 1s;
+        }
+
+        .app-container {
+            background: var(--white);
+            padding: 30px;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        /* 植物表示 */
+        .stage-area {
+            font-size: 100px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .timer-val {
+            font-size: 80px;
+            font-weight: 900;
+            margin: 10px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 設定エリア */
+        .settings {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 20px;
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .setting-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .setting-group input {
+            width: 80%;
+            accent-color: var(--accent-work);
+        }
+
+        /* コレクション */
+        .collection-box {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px dashed #eee;
+        }
+
+        .collection-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+            min-height: 50px;
+        }
+
+        .collected-item {
+            font-size: 24px;
+            background: #f1f1f1;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* ボタン */
+        .controls { display: flex; gap: 10px; }
+        .btn {
+            flex: 1;
+            border: none;
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-start { background: var(--accent-work); color: white; }
+        .btn-reset { background: #dee2e6; color: #495057; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .mode-label {
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div id="modeLabel" class="mode-label" style="background: #d8f3dc;">Focus Mode</div>
+        
+        <div class="stage-area" id="mainPlant">🌱</div>
+        
+        <div class="timer-val" id="timerDisplay">25:00</div>
+
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn">START</button>
+            <button class="btn btn-reset" id="resetBtn">RESET</button>
+        </div>
+
+        <div class="settings">
+            <div class="setting-group">
+                <label>集中: <span id="workVal">25</span>分</label>
+                <input type="range" id="workInput" min="1" max="60" value="25">
+            </div>
+            <div class="setting-group">
+                <label>休憩: <span id="breakVal">5</span>分</label>
+                <input type="range" id="breakInput" min="1" max="30" value="5">
+            </div>
+        </div>
+
+        <div class="collection-box">
+            <div style="font-weight: bold; font-size: 14px;">My Collection (<span id="colCount">0</span>)</div>
+            <div class="collection-grid" id="collectionGrid">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const PLANTS = ['🌻', '🌷', '🌼', '🌵', '🌴', '🌲', '🌳', '🍁', '🌸', '🍀', '🌿', '🎋', '🍃', '🍄', '🍓', '🍎', '🍇', '🎃', '🍊', '🍉'];
+        const STAGES = ['🌱', '🌿', '🌿', '🎍']; // 成長過程
+
+        let state = {
+            workMin: 25,
+            breakMin: 5,
+            timeLeft: 25 * 60,
+            isRunning: false,
+            mode: 'work',
+            collection: []
+        };
+
+        let timerId = null;
+
+        // DOM要素
+        const timerDisplay = document.getElementById('timerDisplay');
+        const mainPlant = document.getElementById('mainPlant');
+        const startBtn = document.getElementById('startBtn');
+        const modeLabel = document.getElementById('modeLabel');
+        const collectionGrid = document.getElementById('collectionGrid');
+
+        // 時間設定の反映
+        function updateSettings() {
+            state.workMin = parseInt(document.getElementById('workInput').value);
+            state.breakMin = parseInt(document.getElementById('breakInput').value);
+            document.getElementById('workVal').textContent = state.workMin;
+            document.getElementById('breakVal').textContent = state.breakMin;
+            
+            if (!state.isRunning) {
+                state.timeLeft = (state.mode === 'work' ? state.workMin : state.breakMin) * 60;
+                render();
+            }
+        }
+
+        function render() {
+            const m = Math.floor(state.timeLeft / 60);
+            const s = state.timeLeft % 60;
+            timerDisplay.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            
+            // 植物の成長描画
+            if (state.mode === 'work') {
+                const total = state.workMin * 60;
+                const progress = (total - state.timeLeft) / total;
+                const idx = Math.min(Math.floor(progress * STAGES.length), STAGES.length - 1);
+                mainPlant.textContent = STAGES[idx];
+            } else {
+                mainPlant.textContent = '☕';
+            }
+        }
+
+        function tick() {
+            if (state.timeLeft > 0) {
+                state.timeLeft--;
+                render();
+            } else {
+                complete();
+            }
+        }
+
+        function complete() {
+            clearInterval(timerId);
+            state.isRunning = false;
+            startBtn.textContent = 'START';
+
+            if (state.mode === 'work') {
+                // コレクション追加
+                const found = PLANTS[Math.floor(Math.random() * PLANTS.length)];
+                addCollection(found);
+                
+                state.mode = 'break';
+                state.timeLeft = state.breakMin * 60;
+                modeLabel.textContent = 'Break Time';
+                modeLabel.style.background = '#caf0f8';
+                document.body.style.background = '#e9f5f8';
+            } else {
+                state.mode = 'work';
+                state.timeLeft = state.workMin * 60;
+                modeLabel.textContent = 'Focus Mode';
+                modeLabel.style.background = '#d8f3dc';
+                document.body.style.background = '#f0f4f1';
+            }
+            render();
+        }
+
+        function addCollection(emoji) {
+            state.collection.push(emoji);
+            const item = document.createElement('div');
+            item.className = 'collected-item';
+            item.textContent = emoji;
+            collectionGrid.prepend(item);
+            document.getElementById('colCount').textContent = state.collection.length;
+        }
+
+        startBtn.onclick = () => {
+            if (state.isRunning) {
+                clearInterval(timerId);
+                startBtn.textContent = 'RESUME';
+            } else {
+                timerId = setInterval(tick, 1000);
+                startBtn.textContent = 'PAUSE';
+            }
+            state.isRunning = !state.isRunning;
+        };
+
+        document.getElementById('resetBtn').onclick = () => {
+            clearInterval(timerId);
+            state.isRunning = false;
+            state.mode = 'work';
+            updateSettings();
+            startBtn.textContent = 'START';
+            modeLabel.textContent = 'Focus Mode';
+            modeLabel.style.background = '#d8f3dc';
+            document.body.style.background = '#f0f4f1';
+        };
+
+        document.getElementById('workInput').oninput = updateSettings;
+        document.getElementById('breakInput').oninput = updateSettings;
+
+        updateSettings();
+    </script>
+</body>
+</html>
