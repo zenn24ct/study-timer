@@ -9,16 +9,16 @@
         * {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            box-sizing: border-box; 
+            /* border-boxは要素の幅と高さにpaddingとborderを含める */
         }
 
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            transition: background 1.5s;
+            transition: background 1.5s; /* 背景色の変化にアニメーションを追加 */
         }
 
         body.work {
@@ -32,10 +32,8 @@
         .container {
             text-align: center;
             background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
             padding: 3rem;
             border-radius: 40px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
             width: 90%;
             max-width: 450px;
         }
@@ -45,7 +43,7 @@
             padding: 6px 16px;
             border-radius: 20px;
             font-weight: bold;
-            text-transform: uppercase;
+            text-transform: uppercase; /* すべて大文字に変換 */
             letter-spacing: 1px;
             margin-bottom: 20px;
             color: white;
@@ -69,7 +67,7 @@
         }
 
         .plant.pulse {
-            animation: pulse 2s infinite;
+            animation: pulse 2s infinite; /* 植物が成長するアニメーション */
         }
 
         @keyframes pulse {
@@ -124,7 +122,7 @@
             border: 2px solid #ddd;
             color: #2d3436;
         }
-
+        /* 追加部分: 統計情報のスタイル */
         .stats {
             margin-top: 40px;
             border-top: 1px solid rgba(0, 0, 0, 0.05);
@@ -138,9 +136,9 @@
             font-size: 12px;
             color: #888;
         }
-
+        /* 追加部分: 統計情報の数値スタイル */
         .stat b {
-            font-size: 20px;
+            font-size: 30px;
         }
     </style>
 </head>
@@ -155,22 +153,25 @@
             <button class="btn btn-sub" id="reset">RESET</button>
         </div>
         <div class="stats">
-            <div class="stat"><span>育てた植物</span><b id="count">0</b></div>
+            <div class="stat"><span>集中した回数</span><b id="count">0</b></div>
             <div class="stat"><span>合計集中時間</span><b id="total">0</b>分</div>
         </div>
     </div>
 
     <script>
+        /* タイマーの基本設定 */
         const WORK = 25 * 60, BREAK = 5 * 60;
         const STAGES = ['🌱', '🌿', '🎍', '🌳', '✨'];
 
         let time = WORK, running = false, mode = 'work', totalSec = 0, plantCount = 0;
         let timer;
 
+        /* $はquerySelectorの短縮形 */
         const $ = s => document.querySelector(s);
         const plant = $('.plant'), display = $('.timer'), badge = $('.badge');
         const body = document.body, startBtn = $('#start');
 
+        /* render関数は、タイマーの表示と植物の状態を更新する */
         function render() {
             const m = Math.floor(time / 60), s = time % 60;
             display.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
@@ -184,7 +185,7 @@
                 plant.classList.remove('pulse');
             }
         }
-
+        /* tick関数は、1秒ごとにタイマーを更新する */
         function tick() {
             if (time > 0) {
                 time--;
@@ -200,13 +201,13 @@
                     time = BREAK;
                     badge.textContent = 'Break Time';
                     body.className = 'break';
-                    alert('集中完了!植物が立派に育ちました。休憩しましょう。');
+                    alert('集中完了! 休憩しましょう。');
                 } else {
                     mode = 'work';
                     time = WORK;
                     badge.textContent = 'Focus Time';
                     body.className = 'work';
-                    alert('リフレッシュ完了。新しい種を植えましょう。');
+                    alert('リフレッシュ完了。頑張ろう。');
                 }
 
                 $('#count').textContent = plantCount;
