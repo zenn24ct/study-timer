@@ -173,7 +173,10 @@
 
         /* render関数は、タイマーの表示と植物の状態を更新する */
         function render() {
+            /* time % 60は秒、Math.floor(time / 60)は分を計算 */
             const m = Math.floor(time / 60), s = time % 60;
+            /* 「分:秒」を 2 桁ずつで表示する文字列を作っている!!
+                例えば、5分3秒なら「05:03」となる。*/
             display.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
             if (mode === 'work') {
@@ -182,7 +185,7 @@
                 plant.classList.toggle('pulse', running);
             } else {
                 plant.textContent = '☕';
-                plant.classList.remove('pulse');
+                plant.classList.remove('pulse'); 
             }
         }
         /* tick関数は、1秒ごとにタイマーを更新する */
@@ -210,20 +213,23 @@
                     alert('リフレッシュ完了。頑張ろう。');
                 }
 
-                $('#count').textContent = plantCount;
-                $('#total').textContent = Math.floor(totalSec / 60);
-                render();
-                startBtn.textContent = 'START NEXT';
+                $('#count').textContent = plantCount; /* 集中した回数を表示 */
+                $('#total').textContent = Math.floor(totalSec / 60); /* 合計集中時間を分単位で表示 */
+                render(); /* タイマー表示を更新 */
+                startBtn.textContent = 'START NEXT'; /* 次のセッションの開始を促す */
             }
         }
-
+        /* スタート/ポーズボタンの動作 */
         startBtn.onclick = () => {
             running = !running;
+            /* ここでは、タイマーの開始と一時停止の切り替えを行っている。*/
             running ? (timer = setInterval(tick, 1000), startBtn.textContent = 'PAUSE')
                 : (clearInterval(timer), startBtn.textContent = 'RESUME');
         };
 
+        /* リセットボタンの動作 */
         $('#reset').onclick = () => {
+            /*  タイマーと状態を初期化 */
             clearInterval(timer);
             running = false;
             mode = 'work';
